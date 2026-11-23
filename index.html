@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amrabad Tiger Reserve – Employee Database</title>
+<link rel="icon" type="image/png" href="https://atrdbms.github.io/atr-dbms/assets/atr-logo.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --green-900:#0f3d24; --green-800:#14532d; --green-700:#1b6b3a; --green-600:#237a45; --green-100:#e5f2e9; --green-50:#f3f9f5;
+    --gold:#c9a227; --ink:#1c2321; --ink-2:#4a5450; --muted:#78837e; --line:#dfe5e1; --bg:#f5f7f6; --card:#fff;
+    --danger:#b42318; --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif;color:var(--ink);background:var(--bg);font-size:14px}
+  button,select,input{font:inherit}
+  /* ---------- header ---------- */
+  .topstrip{background:var(--green-900);color:#d9e8de;font-size:12px;padding:4px 24px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  header.main{background:linear-gradient(90deg,var(--green-800),var(--green-700));color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;border-bottom:4px solid var(--gold)}
+  header.main .emblem{width:56px;height:56px;flex:none;object-fit:contain;background:#fff;border-radius:50%;padding:3px}
+  header.main h1{margin:0;font-size:22px;letter-spacing:.3px}
+  header.main .sub{font-size:13px;opacity:.9;margin-top:2px}
+  header.main .right{margin-left:auto;text-align:right;font-size:12px;opacity:.9}
+  nav.crumbs{background:#fff;border-bottom:1px solid var(--line);padding:10px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  nav.crumbs a{color:var(--green-700);text-decoration:none;cursor:pointer;font-weight:600}
+  nav.crumbs .sep{color:var(--muted)}
+  nav.crumbs .spacer{flex:1}
+  main{padding:20px 24px 40px;max-width:1500px;margin:0 auto}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:16px;border-top:1px solid var(--line);background:#fff}
+  /* ---------- generic ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .card h3{margin:0 0 12px;font-size:15px;color:var(--green-800)}
+  .btn{border:1px solid var(--green-700);background:var(--green-700);color:#fff;border-radius:6px;padding:7px 14px;cursor:pointer;font-weight:600;white-space:nowrap}
+  .btn:hover{background:var(--green-800)}
+  .btn.ghost{background:#fff;color:var(--green-700)}
+  .btn.ghost:hover{background:var(--green-50)}
+  .btn.danger{background:#fff;color:var(--danger);border-color:#e5b3ae}
+  .btn.small{padding:4px 9px;font-size:12px}
+  .muted{color:var(--muted)}
+  .hidden{display:none!important}
+  /* ---------- home ---------- */
+  .welcome{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .welcome h2{margin:0;font-size:20px}
+  .catgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+  .catcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;cursor:pointer;display:flex;gap:18px;align-items:center;transition:.15s;border-left:6px solid var(--green-700)}
+  .catcard:hover{box-shadow:0 6px 20px rgba(20,83,45,.12);transform:translateY(-2px)}
+  .catcard .ic{width:64px;height:64px;border-radius:50%;background:var(--green-100);display:grid;place-items:center;flex:none}
+  .catcard h3{margin:0;font-size:20px;color:var(--green-800)}
+  .catcard .stats{display:flex;gap:18px;margin-top:8px;color:var(--ink-2)}
+  .catcard .stats b{display:block;font-size:22px;color:var(--ink)}
+  .catcard .go{margin-left:auto;font-size:26px;color:var(--green-700)}
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+  .tab{padding:10px 18px;cursor:pointer;border:none;background:none;font-weight:600;color:var(--ink-2);border-bottom:3px solid transparent;margin-bottom:-2px}
+  .tab.active{color:var(--green-800);border-bottom-color:var(--green-700)}
+  .cathead{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+  .cathead h2{margin:0;font-size:20px}
+  .pill{background:var(--green-100);color:var(--green-800);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+  /* ---------- filters ---------- */
+  .filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;align-items:end}
+  .filters label,.form label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:3px}
+  select,input[type=text],input[type=tel],input[type=search]{width:100%;padding:7px 9px;border:1px solid #cbd3cf;border-radius:6px;background:#fff}
+  select:disabled,input:disabled{background:#f0f2f1;color:var(--muted)}
+  .filteractions{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+  .filteractions .count{margin-right:auto;color:var(--ink-2)}
+  /* ---------- kpis ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .kpi .v{font-size:28px;font-weight:700;color:var(--ink)}
+  .kpi .l{font-size:12px;color:var(--ink-2);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  @media (max-width:900px){.grid2{grid-template-columns:1fr}}
+  .chartbox{position:relative;height:320px}
+  /* ---------- tables ---------- */
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  th{background:var(--green-50);color:var(--green-900);position:sticky;top:0;font-weight:700;cursor:pointer;user-select:none}
+  th.num,td.num{text-align:right}
+  tr:hover td{background:#fafcfb}
+  tfoot td{font-weight:700;background:var(--green-50)}
+  td img.ph{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+  .noph{width:36px;height:36px;border-radius:50%;background:var(--green-100);display:inline-grid;place-items:center;color:var(--green-800);font-weight:700}
+  .pager{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+  /* ---------- form ---------- */
+  .form{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .form .full{grid-column:1/-1}
+  fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:0 0 16px}
+  legend{font-weight:700;color:var(--green-800);padding:0 6px}
+  .req::after{content:" *";color:var(--danger)}
+  .photoprev{width:96px;height:96px;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--green-50)}
+  .err{color:var(--danger);font-size:12px;margin-top:3px}
+  /* ---------- overlay ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(15,30,22,.45);display:grid;place-items:center;z-index:50}
+  .dialog{background:#fff;border-radius:12px;padding:22px;max-width:420px;width:90%}
+  .dialog h3{margin:0 0 8px}
+  .dialog .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--green-900);color:#fff;padding:10px 18px;border-radius:8px;z-index:60;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+  .toast.bad{background:var(--danger)}
+  .loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:80px;color:var(--ink-2)}
+  .spin{width:36px;height:36px;border:4px solid var(--green-100);border-top-color:var(--green-700);border-radius:50%;animation:s 1s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .printhead{display:none}
+  @media print{
+    .topstrip,nav.crumbs,.tabs,.filteractions,.filters,.noprint,footer,.pager{display:none!important}
+    header.main{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{background:#fff}
+    main{padding:0}
+    .printhead{display:block;margin:8px 0;font-size:12px}
+    .card,.kpi{break-inside:avoid}
+    .chartbox{height:260px}
+    .grid2{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:640px){
+    header.main h1{font-size:17px} header.main .right{display:none}
+    main{padding:14px} .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="topstrip"><span>Government of Telangana · Telangana Forest Department</span><span id="loadedAt"></span></div>
+<header class="main">
+  <img class="emblem" src="assets/telangana-emblem.png" onerror="this.onerror=null;this.src='https://atrdbms.github.io/atr-dbms/assets/telangana-emblem.png'" alt="Government of Telangana emblem">
+  <img class="emblem" src="assets/atr-logo.png" onerror="this.onerror=null;this.src='https://atrdbms.github.io/atr-dbms/assets/atr-logo.png'" alt="Amrabad Tiger Reserve logo">
+  <div>
+    <h1>Amrabad Tiger Reserve</h1>
+    <div class="sub">Employee Database Management System</div>
+  </div>
+  <div class="right">Nagarkurnool &amp; Nalgonda Districts<br>Telangana</div>
+</header>
+<nav class="crumbs">
+  <a href="https://atrdbms.github.io/atr-dbms/" style="font-weight:500">ATR DBMS</a><span class="sep">›</span><a onclick="goHome()">Employee Database</a><span id="crumbCat" class="hidden"><span class="sep">›</span> <span id="crumbCatName"></span></span>
+  <span class="spacer"></span>
+  <button class="btn ghost small" onclick="reload()">↻ Refresh data</button>
+  <a id="sheetLink" class="btn ghost small hidden" target="_blank" style="text-decoration:none">Open Google Sheet</a>
+</nav>
+
+<main id="app"><div class="loading"><div class="spin"></div>Loading employee database…</div></main>
+
+<footer>Amrabad Tiger Reserve · Telangana Forest Department · Data source: Employee data (Google Sheet)</footer>
+
+<script>
+/* ================================================================
+   Configuration
+   ================================================================ */
+const LEVELS = ['Designation','Place of working','Circle','District','Division','Range','Section','Beat','Basecamp'];
+const FILTER_COLS = ['Designation','Place of working','District','Division','Range','Section','Beat','Basecamp','Scheme'];
+const PAGE_SIZE = 25;
+const CHART_COLOR = '#237a45';
+
+/* ================================================================
+   Server connection
+   ----------------------------------------------------------------
+   API_URL: paste the Apps Script "Web app" URL (ends with /exec).
+   The website (GitHub Pages) reads and writes the Google Sheet through it.
+   ================================================================ */
+const API_URL = 'https://script.google.com/macros/s/AKfycby8YAvoszo-Txki_j2HECOnkXXS2OMLpCb5gTfSlklTheg0Y-5zPxi5pduXX4OPjJS8Eg/exec';
+
+function passKey(){ try{ return localStorage.getItem('atr_emp_key')||''; }catch(e){ return ''; } }
+async function api(fn, ...args){
+  if (window.MOCK_API) return window.MOCK_API[fn](...args);
+  let res;
+  if (API_URL) {
+    const r = await fetch(API_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+                                     body: JSON.stringify({ action:fn, args, key:passKey() }) });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    res = await r.json();
+  } else if (window.google && google.script && google.script.run) {
+    res = await new Promise((ok,no)=>google.script.run.withSuccessHandler(ok).withFailureHandler(no).apiCall(fn,args,passKey()));
+  } else {
+    throw new Error('SETUP');
+  }
+  if (res.error === 'AUTH') throw new Error('AUTH');
+  if (res.error) throw new Error(res.message || res.error);
+  return res.data;
+}
+
+/* ================================================================
+   State
+   ================================================================ */
+const S = { data:null, cat:null, tab:'dashboard', filters:{}, search:'', page:1, sort:{col:'ID No',dir:1}, editing:null, prefill:null, charts:[] };
+
+function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uniq(a){ return [...new Set(a.filter(v=>v!==''&&v!=null))].sort((x,y)=>String(x).localeCompare(String(y),undefined,{numeric:true})); }
+function countBy(rows,col){ const m={}; rows.forEach(r=>{ const k=r[col]||'(Not applicable)'; m[k]=(m[k]||0)+1; }); return m; }
+function toast(msg,bad){ const t=document.createElement('div'); t.className='toast'+(bad?' bad':''); t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+function confirmBox(title,text,okLabel){
+  return new Promise(res=>{
+    const o=document.createElement('div'); o.className='overlay';
+    o.innerHTML=`<div class="dialog"><h3>${esc(title)}</h3><div>${esc(text)}</div><div class="acts"><button class="btn ghost" data-a="0">Cancel</button><button class="btn" style="background:var(--danger);border-color:var(--danger)" data-a="1">${esc(okLabel)}</button></div></div>`;
+    o.onclick=e=>{ const a=e.target.dataset.a; if(a!==undefined){ o.remove(); res(a==='1'); } };
+    document.body.appendChild(o);
+  });
+}
+
+async function reload(){
+  try{
+    S.data = await api('getAppData');
+    stampHeader();
+    const sl=document.getElementById('sheetLink'); if(S.data.sheetUrl){ sl.href=S.data.sheetUrl; sl.classList.remove('hidden'); }
+    render();
+    loadMstripes(false);
+  }catch(e){
+    const app=document.getElementById('app'), m=e.message||String(e);
+    if(m==='AUTH'){
+      app.innerHTML = `<div class="card" style="max-width:420px;margin:40px auto;text-align:center">
+        <h3>Enter passcode</h3><div class="muted" style="margin-bottom:12px">This database is protected. Ask the ATR office for the passcode.</div>
+        <input type="password" id="pc" placeholder="Passcode" style="margin-bottom:10px"><button class="btn" id="pcb">Open database</button>
+        ${passKey()?'<div class="err" style="margin-top:8px">That passcode was not accepted.</div>':''}</div>`;
+      const go=()=>{ try{ localStorage.setItem('atr_emp_key',document.getElementById('pc').value.trim()); }catch(_){} app.innerHTML='<div class="loading"><div class="spin"></div>Loading…</div>'; reload(); };
+      document.getElementById('pcb').onclick=go; document.getElementById('pc').onkeydown=ev=>{ if(ev.key==='Enter') go(); };
+      return;
+    }
+    if(m==='SETUP'){
+      app.innerHTML = `<div class="card" style="max-width:640px;margin:40px auto"><h3>Website not connected yet</h3>
+        The page is installed, but it is not yet connected to the Google Sheet. Deploy the Apps Script data service
+        (see <b>README.md</b>) and paste its Web app URL into <code>API_URL</code> near the top of the script in <code>index.html</code>.</div>`;
+      return;
+    }
+    app.innerHTML = `<div class="card empty">Could not load data: ${esc(m)}<br><br><button class="btn" onclick="reload()">Try again</button></div>`;
+  }
+}
+function stampHeader(){
+  let t='Employee data as on ' + S.data.loadedAt;
+  if(M.status==='ok') t+=' · M-STrIPES as on ' + M.loadedAt;
+  else if(M.status==='loading') t+=' · loading M-STrIPES…';
+  document.getElementById('loadedAt').textContent = t;
+}
+
+/* ================================================================
+   M-STrIPES link — patrol summary per officer, matched on Name + Designation
+   ================================================================ */
+const M = { status:'idle', list:[], byKey:new Map(), byName:new Map(), loadedAt:'', err:'' };
+function normName(s){ return String(s||'').toLowerCase().replace(/[^a-z]+/g,' ').trim().split(' ').filter(Boolean).sort().join(' '); }
+function abbr(d){
+  d=String(d||'').trim(); if(!d) return '';
+  let a = /\s/.test(d) ? d.split(/\s+/).filter(w=>!/^(of|and|the|cum)$/i.test(w)).map(w=>w[0]).join('') : d;
+  a=a.toUpperCase().replace(/[^A-Z]/g,'');
+  return a==='DYRO' ? 'DRO' : a;
+}
+async function loadMstripes(force){
+  M.status='loading'; if(S.data) stampHeader();
+  try{
+    const d=await api('getMstripes', !!force);
+    M.list=d.officers||[]; M.loadedAt=d.loadedAt; M.byKey=new Map(); M.byName=new Map();
+    M.list.forEach(o=>{ const n=normName(o.name); M.byKey.set(n+'|'+abbr(o.desig),o); if(!M.byName.has(n)) M.byName.set(n,[]); M.byName.get(n).push(o); });
+    M.status='ok';
+  }catch(e){ M.status='error'; M.err=e.message||String(e); }
+  stampHeader();
+  if(S.cat && S.tab!=='form') render(); else if(S.cat && S.tab==='form') attachNameList();
+}
+function mLink(r){
+  if(M.status!=='ok') return null;
+  const n=normName(r['Name']); if(!n) return null;
+  return M.byKey.get(n+'|'+abbr(r['Designation'])) || null;
+}
+function catAbbrs(){ return new Set(catMaster().map(r=>abbr(r['Designation']))); }
+/* M-STrIPES spells some places differently ("Nagarjuna Sagar", "Kambala Pally"): compare without spaces/case. */
+const placeKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function masterPlace(level,v){ const k=placeKey(v); return uniq(S.data.master.map(r=>r[level])).find(x=>placeKey(x)===k) || v; }
+function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}-${m}-${y}`; }
+
+function categories(){
+  const fromMaster = S.data.master.map(r=>r['Category']);
+  const fromData = S.data.employees.map(r=>r['Category']);
+  const order = ['Regular','Outsourcing'];
+  return uniq([...fromMaster,...fromData]).sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99));
+}
+const catEmployees = () => S.data.employees.filter(r=>r['Category']===S.cat);
+const catMaster = () => S.data.master.filter(r=>r['Category']===S.cat);
+
+/* ================================================================
+   Routing
+   ================================================================ */
+function goHome(){ S.cat=null; render(); }
+function openCat(c){ S.cat=c; S.tab='dashboard'; S.filters={}; S.search=''; S.page=1; render(); }
+function setTab(t){ S.tab=t; if(t!=='form') S.editing=null; render(); }
+
+function render(){
+  S.charts.forEach(c=>c.destroy()); S.charts=[];
+  const crumb=document.getElementById('crumbCat');
+  if(!S.cat){ crumb.classList.add('hidden'); renderHome(); return; }
+  crumb.classList.remove('hidden'); document.getElementById('crumbCatName').textContent = S.cat + ' Employees';
+  const app=document.getElementById('app');
+  const n=catEmployees().length;
+  app.innerHTML = `
+    <div class="cathead"><h2>${esc(S.cat)} Employees</h2><span class="pill">${n} record${n===1?'':'s'}</span></div>
+    <div class="tabs">
+      <button class="tab ${S.tab==='dashboard'?'active':''}" onclick="setTab('dashboard')">Dashboard &amp; Reports</button>
+      <button class="tab ${S.tab==='records'?'active':''}" onclick="setTab('records')">Employee Records</button>
+      <button class="tab ${S.tab==='form'?'active':''}" onclick="setTab('form')">${S.editing?'Edit Employee':'+ Add Employee'}</button>
+    </div>
+    <div id="tabbody"></div>`;
+  if(S.tab==='form') renderForm(); else { renderFilters(); S.tab==='dashboard'?renderDashboard():renderRecords(); }
+}
+
+/* ================================================================
+   Home — category selection
+   ================================================================ */
+function renderHome(){
+  const cats=categories();
+  const icon = c => c==='Regular'
+    ? '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2"><path d="M12 2l7 4v6c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>'
+    : '<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#14532d" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16 14.6c2.7.2 4.6 2 5.3 4.9"/></svg>';
+  const total=S.data.employees.length;
+  document.getElementById('app').innerHTML = `
+    <div class="welcome"><div><h2>Select Employee Category</h2><div class="muted">Choose a category to view records, filters, reports and charts.</div></div>
+      <div class="muted">Total employees in database: <b style="color:var(--ink)">${total}</b></div></div>
+    <div class="catgrid">${cats.map(c=>{
+      const emps=S.data.employees.filter(r=>r['Category']===c);
+      const posts=S.data.master.filter(r=>r['Category']===c);
+      return `<div class="catcard" onclick="openCat('${esc(c)}')" role="button" tabindex="0">
+        <div class="ic">${icon(c)}</div>
+        <div><h3>${esc(c)}</h3>
+          <div class="stats"><span><b>${emps.length}</b>Employees</span><span><b>${uniq(posts.map(r=>r['Designation'])).length}</b>Designations</span><span><b>${posts.length}</b>Posts listed</span></div>
+        </div><div class="go">›</div></div>`;}).join('')}
+    </div>`;
+}
+
+/* ================================================================
+   Filters (shared by dashboard + records)
+   ================================================================ */
+function filteredRows(exceptCol){
+  const q=S.search.trim().toLowerCase();
+  return catEmployees().filter(r=>{
+    for(const c of FILTER_COLS){ if(c!==exceptCol && S.filters[c] && r[c]!==S.filters[c]) return false; }
+    if(S.filters._m && exceptCol!=='_m' && (S.filters._m==='Linked') !== !!mLink(r)) return false;
+    if(q && exceptCol===undefined){
+      const hay=[r['Name'],r['Employee ID'],r['Mobile No'],r['EPF No'],r['ID No']].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function renderFilters(){
+  const cols=FILTER_COLS.filter(c=>S.data.headers.includes(c));
+  const body=document.getElementById('tabbody');
+  body.innerHTML = `<div class="card noprint" id="filtercard"><div class="filters">
+      ${cols.map(c=>{
+        const opts=uniq(filteredRows(c).map(r=>r[c]));
+        if(S.filters[c] && !opts.includes(S.filters[c])) opts.unshift(S.filters[c]);
+        return `<div><label>${esc(c)}</label><select onchange="setFilter('${esc(c)}',this.value)"><option value="">All</option>${opts.map(o=>`<option ${S.filters[c]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+      }).join('')}
+      <div><label>M-STrIPES link</label><select onchange="setFilter('_m',this.value)" ${M.status==='ok'?'':'disabled'}>${['','Linked','Not linked'].map(o=>`<option value="${o}" ${S.filters._m===o?'selected':''}>${o||'All'}</option>`).join('')}</select></div>
+      <div style="grid-column:span 2"><label>Search name / Employee ID / mobile / EPF</label><input type="search" id="q" value="${esc(S.search)}" placeholder="Type to search…"></div>
+    </div>
+    <div class="filteractions"><span class="count" id="fcount"></span>
+      <button class="btn ghost small" onclick="clearFilters()">Clear filters</button>
+      <button class="btn ghost small" onclick="exportCSV()">⭳ Export to Excel (CSV)</button>
+      <button class="btn ghost small" onclick="exportMstripes()">⭳ M-STrIPES staff list</button>
+      <button class="btn ghost small" onclick="window.print()">🖶 Print</button>
+    </div></div>
+    <div class="printhead" id="printhead"></div>
+    <div id="tabcontent" style="margin-top:16px"></div>`;
+  const q=document.getElementById('q');
+  q.oninput=()=>{ S.search=q.value; S.page=1; refreshContent(); };
+}
+function filterSummary(){
+  const parts=Object.entries(S.filters).filter(([,v])=>v).map(([k,v])=>`${k==='_m'?'M-STrIPES':k}: ${v}`);
+  if(S.search) parts.push(`Search: "${S.search}"`);
+  return parts.length?parts.join(' · '):'All records';
+}
+function setFilter(c,v){ S.filters[c]=v; S.page=1; render(); }
+function clearFilters(){ S.filters={}; S.search=''; S.page=1; render(); }
+function refreshContent(){ S.charts.forEach(c=>c.destroy()); S.charts=[]; S.tab==='dashboard'?renderDashboard():renderRecords(); }
+function updateCount(n){
+  document.getElementById('fcount').innerHTML = `Showing <b>${n}</b> of ${catEmployees().length} ${esc(S.cat)} employees`;
+  document.getElementById('printhead').innerHTML = `<b>${esc(S.cat)} Employees – ${S.tab==='dashboard'?'Summary Report':'Employee List'}</b> · ${esc(filterSummary())} · ${n} records · ${esc(S.data.loadedAt)}`;
+}
+
+/* ================================================================
+   Dashboard & reports
+   ================================================================ */
+function renderDashboard(){
+  const rows=filteredRows();
+  updateCount(rows.length);
+  const master=catMaster();
+  const el=document.getElementById('tabcontent');
+  if(!catEmployees().length){
+    el.innerHTML = `<div class="card empty">No ${esc(S.cat)} employees have been entered yet.<br><br><button class="btn" onclick="setTab('form')">+ Add the first employee</button></div>` + mstripesReport(rows) + postsReport(rows,master);
+    return;
+  }
+  const desig=uniq(rows.map(r=>r['Designation']));
+  const ranges=uniq(rows.map(r=>r['Range']));
+  const withMobile=rows.filter(r=>r['Mobile No']).length;
+  el.innerHTML = `
+    <div class="kpis">
+      <div class="kpi"><div class="l">Employees</div><div class="v">${rows.length}</div></div>
+      <div class="kpi"><div class="l">Designations</div><div class="v">${desig.length}</div></div>
+      <div class="kpi"><div class="l">Divisions</div><div class="v">${uniq(rows.map(r=>r['Division'])).length}</div></div>
+      <div class="kpi"><div class="l">Ranges</div><div class="v">${ranges.length}</div></div>
+      <div class="kpi"><div class="l">Beats covered</div><div class="v">${uniq(rows.map(r=>r['Beat'])).length}</div></div>
+      <div class="kpi"><div class="l">Mobile no. on record</div><div class="v">${rows.length?Math.round(withMobile*100/rows.length):0}%</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3>Designation-wise employees</h3><div class="chartbox" style="height:${Math.max(240,desig.length*26+40)}px"><canvas id="ch1"></canvas></div></div>
+      <div class="card"><h3>Range-wise employees</h3><div class="chartbox" style="height:${Math.max(240,ranges.length*26+40)}px"><canvas id="ch2"></canvas></div></div>
+      <div class="card"><h3>Division-wise employees</h3><div class="chartbox"><canvas id="ch3"></canvas></div></div>
+      <div class="card"><h3>Place of working</h3><div class="chartbox"><canvas id="ch4"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>Report: Designation × Division</h3>${matrix(rows,'Designation','Division')}</div>
+    <div class="card" style="margin-top:16px"><h3>Report: Designation × Range</h3>${matrix(rows,'Designation','Range')}</div>
+    ${mstripesReport(rows)}
+    ${postsReport(rows,master)}`;
+  barChart('ch1',countBy(rows,'Designation'),true);
+  barChart('ch2',countBy(rows,'Range'),true);
+  barChart('ch3',countBy(rows,'Division'),false);
+  barChart('ch4',countBy(rows,'Place of working'),false);
+}
+function barChart(id,counts,horizontal){
+  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const ctx=document.getElementById(id); if(!ctx||!window.Chart) return;
+  S.charts.push(new Chart(ctx,{type:'bar',
+    data:{labels:entries.map(e=>e[0]),datasets:[{label:'Employees',data:entries.map(e=>e[1]),backgroundColor:CHART_COLOR,hoverBackgroundColor:'#14532d',borderRadius:4,borderSkipped:'start',maxBarThickness:28}]},
+    options:{indexAxis:horizontal?'y':'x',maintainAspectRatio:false,animation:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed[horizontal?'x':'y']} employees`}}},
+      scales:{[horizontal?'x':'y']:{beginAtZero:true,ticks:{precision:0,color:'#4a5450'},grid:{color:'#edf0ee'}},[horizontal?'y':'x']:{ticks:{color:'#4a5450',autoSkip:false},grid:{display:false}}}}}));
+}
+function matrix(rows,rowCol,colCol){
+  const rs=uniq(rows.map(r=>r[rowCol]||'(Not applicable)')), cs=uniq(rows.map(r=>r[colCol]||'(Not applicable)'));
+  const m={}; rows.forEach(r=>{ const a=r[rowCol]||'(Not applicable)', b=r[colCol]||'(Not applicable)'; m[a+'|'+b]=(m[a+'|'+b]||0)+1; });
+  const colTot=cs.map(c=>rs.reduce((s,r)=>s+(m[r+'|'+c]||0),0));
+  return `<div class="tablewrap"><table><thead><tr><th>${esc(rowCol)}</th>${cs.map(c=>`<th class="num">${esc(c)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+    ${rs.map(r=>{ const vals=cs.map(c=>m[r+'|'+c]||0); return `<tr><td>${esc(r)}</td>${vals.map(v=>`<td class="num">${v||'<span class="muted">–</span>'}</td>`).join('')}<td class="num"><b>${vals.reduce((a,b)=>a+b,0)}</b></td></tr>`; }).join('')}
+    </tbody><tfoot><tr><td>Total</td>${colTot.map(v=>`<td class="num">${v}</td>`).join('')}<td class="num">${rows.length}</td></tr></tfoot></table></div>`;
+}
+/* M-STrIPES link report: patrol work of employees + officers in M-STrIPES not yet in the database */
+function mstripesReport(rows){
+  const head='<div class="card" style="margin-top:16px"><h3>M-STrIPES link (matched on Name + Designation)</h3>';
+  if(M.status==='loading'||M.status==='idle') return head+'<div class="muted">Loading M-STrIPES patrol data…</div></div>';
+  if(M.status==='error') return head+`<div class="muted">M-STrIPES data could not be loaded: ${esc(M.err)}</div></div>`;
+  const linked=rows.map(r=>[r,mLink(r)]).filter(x=>x[1]).sort((a,b)=>b[1].km-a[1].km);
+  const used=new Set(catEmployees().map(mLink).filter(Boolean));
+  const ab=catAbbrs();
+  const missing=M.list.filter(o=>!used.has(o) && ab.has(abbr(o.desig))
+      && (!S.filters['Division']||placeKey(o.division)===placeKey(S.filters['Division'])) && (!S.filters['Range']||placeKey(o.range)===placeKey(S.filters['Range'])))
+    .sort((a,b)=>a.division.localeCompare(b.division)||a.range.localeCompare(b.range)||a.name.localeCompare(b.name));
+  const km=linked.reduce((s,x)=>s+x[1].km,0), days=linked.reduce((s,x)=>s+x[1].days,0), obs=linked.reduce((s,x)=>s+x[1].obs,0);
+  return `${head}
+    <div class="kpis" style="margin-top:4px">
+      <div class="kpi"><div class="l">Employees linked</div><div class="v">${linked.length} <span class="muted" style="font-size:14px">of ${rows.length}</span></div></div>
+      <div class="kpi"><div class="l">Patrol km (linked)</div><div class="v">${Math.round(km).toLocaleString('en-IN')}</div></div>
+      <div class="kpi"><div class="l">Patrol days (linked)</div><div class="v">${days.toLocaleString('en-IN')}</div></div>
+      <div class="kpi"><div class="l">Observations (linked)</div><div class="v">${obs.toLocaleString('en-IN')}</div></div>
+      <div class="kpi"><div class="l">In M-STrIPES, not in database</div><div class="v">${missing.length}</div></div>
+    </div>
+    ${linked.length?`<h4 style="margin:8px 0">Patrol summary of employees</h4><div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Name</th><th>Designation</th><th>Range</th><th>Beats patrolled</th><th class="num">Patrols</th><th class="num">Days</th><th class="num">Km</th><th class="num">Observations</th><th>Last patrol</th></tr></thead><tbody>
+      ${linked.map(([r,o])=>`<tr><td>${esc(r['Name'])}</td><td>${esc(r['Designation'])}</td><td>${esc(r['Range'])}</td><td>${esc(o.beats)}</td><td class="num">${o.patrols}</td><td class="num">${o.days}</td><td class="num">${o.km.toLocaleString('en-IN')}</td><td class="num">${o.obs}</td><td>${fmtDate(o.last)}</td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="muted">No employee in this view matches an M-STrIPES officer yet.</div>'}
+    ${missing.length?`<h4 style="margin:16px 0 4px">In M-STrIPES but not yet in the employee database</h4>
+      <div class="muted" style="font-size:12px;margin-bottom:8px">Click <b>Add</b> to create the employee with Name and Designation filled in from M-STrIPES.</div>
+      <div class="tablewrap" style="max-height:380px"><table><thead><tr><th>Name (M-STrIPES)</th><th>Designation</th><th>Division</th><th>Range</th><th class="num">Patrols</th><th>Last patrol</th><th class="noprint"></th></tr></thead><tbody>
+      ${missing.map(o=>`<tr><td>${esc(o.name)}</td><td>${esc(o.desig)}</td><td>${esc(o.division)}</td><td>${esc(o.range)}</td><td class="num">${o.patrols}</td><td>${fmtDate(o.last)}</td><td class="noprint"><button class="btn ghost small" onclick="addFromMstripes(${M.list.indexOf(o)})">+ Add</button></td></tr>`).join('')}
+      </tbody></table></div>`:''}
+  </div>`;
+}
+function desigFromAbbr(a){ return uniq(catMaster().map(r=>r['Designation'])).find(d=>abbr(d)===abbr(a)) || ''; }
+function addFromMstripes(i){
+  const o=M.list[i]; if(!o) return;
+  S.prefill={ 'Name':o.name, 'Designation':desigFromAbbr(o.desig), 'Range':masterPlace('Range',o.range), 'Division':masterPlace('Division',o.division) };
+  S.editing=null; S.tab='form'; render();
+}
+
+/* Posts listed in the master ("categries") vs employees in position, per designation. */
+function postsReport(rows,master){
+  const fm=master.filter(r=>FILTER_COLS.every(c=>!S.filters[c]||c==='Scheme'||r[c]===S.filters[c]));
+  const desig=uniq([...fm.map(r=>r['Designation']),...rows.map(r=>r['Designation'])]);
+  if(!desig.length) return '';
+  let tp=0,tf=0,tv=0;
+  const body=desig.map(d=>{
+    const p=fm.filter(r=>r['Designation']===d).length, f=rows.filter(r=>r['Designation']===d).length, v=Math.max(0,p-f);
+    tp+=p; tf+=f; tv+=v;
+    return `<tr><td>${esc(d)}</td><td class="num">${p}</td><td class="num">${f}</td><td class="num">${v||'–'}</td><td class="num">${p?Math.round(Math.min(f,p)*100/p)+'%':'–'}</td></tr>`;
+  }).join('');
+  return `<div class="card" style="margin-top:16px"><h3>Report: Posts listed vs employees entered (by designation)</h3>
+    <div class="muted" style="margin:-6px 0 10px;font-size:12px">"Posts listed" counts the positions in the <i>categries</i> master tab for the selected filters.</div>
+    <div class="tablewrap"><table><thead><tr><th>Designation</th><th class="num">Posts listed</th><th class="num">Employees entered</th><th class="num">Not yet entered</th><th class="num">Coverage</th></tr></thead>
+    <tbody>${body}</tbody><tfoot><tr><td>Total</td><td class="num">${tp}</td><td class="num">${tf}</td><td class="num">${tv}</td><td class="num">${tp?Math.round(Math.min(tf,tp)*100/tp)+'%':'–'}</td></tr></tfoot></table></div></div>`;
+}
+
+/* ================================================================
+   Records table
+   ================================================================ */
+function renderRecords(){
+  let rows=filteredRows();
+  updateCount(rows.length);
+  const cols=S.data.headers;
+  const {col,dir}=S.sort;
+  rows=[...rows].sort((a,b)=>String(a[col]??'').localeCompare(String(b[col]??''),undefined,{numeric:true})*dir);
+  const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE)); if(S.page>pages) S.page=pages;
+  const pageRows=rows.slice((S.page-1)*PAGE_SIZE,S.page*PAGE_SIZE);
+  const el=document.getElementById('tabcontent');
+  if(!rows.length){ el.innerHTML=`<div class="card empty">No records match.${catEmployees().length?'':`<br><br><button class="btn" onclick="setTab('form')">+ Add employee</button>`}</div>`; return; }
+  el.innerHTML = `<div class="tablewrap"><table><thead><tr>
+      ${cols.map(c=>`<th class="${c==='ID No'?'num':''}" onclick="sortBy('${esc(c)}')">${esc(c)}${col===c?(dir>0?' ▲':' ▼'):''}</th>`).join('')}<th>M-STrIPES</th><th class="noprint">Actions</th></tr></thead>
+    <tbody>${pageRows.map(r=>`<tr>${cols.map(c=>`<td class="${c==='ID No'?'num':''}">${cellHtml(c,r)}</td>`).join('')}<td>${mCell(r)}</td>
+      <td class="noprint"><button class="btn ghost small" onclick="editRow(${r._row})">Edit</button> <button class="btn danger small" onclick="delRow(${r._row})">Delete</button></td></tr>`).join('')}</tbody></table></div>
+    <div class="pager">Page ${S.page} of ${pages}
+      <button class="btn ghost small" ${S.page<=1?'disabled':''} onclick="S.page--;refreshContent()">‹ Prev</button>
+      <button class="btn ghost small" ${S.page>=pages?'disabled':''} onclick="S.page++;refreshContent()">Next ›</button></div>`;
+}
+function mCell(r){
+  if(M.status==='loading'||M.status==='idle') return '<span class="muted">…</span>';
+  if(M.status==='error') return '<span class="muted">–</span>';
+  const o=mLink(r);
+  return o ? `<span class="pill" title="${esc(o.name+' · '+o.desig+' · beats: '+o.beats)}">✓ ${o.patrols} patrols · ${o.km.toLocaleString('en-IN')} km</span> <span class="muted" style="font-size:12px">last ${fmtDate(o.last)}</span>` : '<span class="muted">Not found</span>';
+}
+function cellHtml(c,r){
+  const v=r[c];
+  if(c==='Photo') return v?`<a href="${esc(v)}" target="_blank"><img class="ph" src="${esc(v)}" alt="" loading="lazy"></a>`:`<span class="noph">${esc((r['Name']||'?').charAt(0).toUpperCase())}</span>`;
+  if(c==='Mobile No' && v) return `<a href="tel:${esc(v)}">${esc(v)}</a>`;
+  return esc(v);
+}
+function sortBy(c){ S.sort = S.sort.col===c?{col:c,dir:-S.sort.dir}:{col:c,dir:1}; refreshContent(); }
+function editRow(row){ S.editing=S.data.employees.find(r=>r._row===row); S.tab='form'; render(); }
+async function delRow(row){
+  const r=S.data.employees.find(x=>x._row===row); if(!r) return;
+  if(!await confirmBox('Delete employee?',`${r['Name']} (${r['Designation']}) will be removed from the Google Sheet.`,'Delete')) return;
+  try{ S.data=await api('deleteEmployee',row,r['ID No']); toast('Employee deleted'); render(); }catch(e){ toast(e.message||String(e),true); }
+}
+
+/* ================================================================
+   Export
+   ================================================================ */
+function download(name,rows,cols){
+  const q=v=>{ v=String(v??''); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const csv='﻿'+[cols.map(q).join(','),...rows.map(r=>cols.map(c=>q(c==='Mobile No'||c==='EPF No'?(r[c]?'\t'+r[c]:''):r[c])).join(','))].join('\r\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download=name; a.click();
+}
+function stamp(){ return new Date().toISOString().slice(0,10); }
+function exportCSV(){
+  const rows=filteredRows().map(r=>{ const o=mLink(r); return Object.assign({},r,{ 'M-STrIPES patrols':o?o.patrols:'', 'M-STrIPES days':o?o.days:'', 'M-STrIPES km':o?o.km:'', 'M-STrIPES last patrol':o?fmtDate(o.last):'' }); });
+  const extra=M.status==='ok'?['M-STrIPES patrols','M-STrIPES days','M-STrIPES km','M-STrIPES last patrol']:[];
+  download(`ATR_${S.cat}_employees_${stamp()}.csv`,rows,S.data.headers.filter(h=>h!=='Photo').concat(extra));
+}
+function exportMstripes(){
+  const cols=['Name','Designation','Mobile No','Division','Range','Section','Beat','Employee ID'].filter(c=>S.data.headers.includes(c));
+  download(`ATR_${S.cat}_MSTrIPES_staff_${stamp()}.csv`,filteredRows(),cols);
+}
+
+/* ================================================================
+   Add / edit form with cascading master-data dropdowns
+   ================================================================ */
+let formPhoto=null;
+function renderForm(){
+  const e=S.editing||S.prefill||{};
+  const isEdit=!!S.editing;
+  S.prefill=null;
+  formPhoto=null;
+  const has=c=>S.data.headers.includes(c);
+  const text=(c,type,extra)=>has(c)?`<div><label class="${extra&&extra.req?'req':''}">${esc(c)}</label><input type="${type||'text'}" name="${esc(c)}" value="${esc(e[c])}" ${extra&&extra.attrs||''}><div class="err" data-err="${esc(c)}"></div></div>`:'';
+  document.getElementById('tabbody').innerHTML = `
+    <form class="card" id="empform" onsubmit="return false">
+      <fieldset><legend>Post details (${esc(S.cat)})</legend>
+        <div class="muted" style="font-size:12px;margin-bottom:10px">Options come from the <i>categries</i> master tab. Pick from top to bottom; fields that do not apply to a post are disabled.</div>
+        <div class="form" id="levels">${LEVELS.filter(has).map(l=>`<div><label class="${l==='Designation'||l==='Place of working'?'req':''}">${esc(l)}</label><select name="${esc(l)}" data-level="${esc(l)}"></select><div class="err" data-err="${esc(l)}"></div></div>`).join('')}</div>
+      </fieldset>
+      <fieldset><legend>Employee details</legend>
+        <div class="form">
+          ${has('ID No')?`<div><label>ID No</label><input type="text" value="${esc(isEdit?e['ID No']:'Auto')}" disabled></div>`:''}
+          ${text('Name','text',{req:1,attrs:'maxlength="100" autocomplete="off" list="mnames"'})}<datalist id="mnames"></datalist>
+          ${text('Employee ID','text',{attrs:'maxlength="40"'})}
+          ${text('Mobile No','tel',{attrs:'inputmode="numeric" maxlength="10" placeholder="10-digit mobile"'})}
+          ${text('Scheme','text',{attrs:'maxlength="80"'})}
+          ${text('EPF No','text',{attrs:'maxlength="40"'})}
+          ${has('Photo')?`<div class="full" style="display:flex;gap:14px;align-items:center">
+              <img id="photoprev" class="photoprev" src="${esc(e['Photo']||'')}" alt="" ${e['Photo']?'':'style="display:none"'}>
+              <div><label>Photo</label><input type="file" accept="image/*" id="photofile"><div class="muted" style="font-size:12px">JPG/PNG. Resized automatically and saved to Google Drive.</div></div></div>`:''}
+        </div>
+      </fieldset>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn ghost" type="button" onclick="setTab('records')">Cancel</button>
+        <button class="btn" type="button" id="savebtn" onclick="submitForm()">${S.editing?'Update employee':'Save employee'}</button>
+      </div>
+    </form>`;
+  document.querySelectorAll('#levels select').forEach(s=>s.onchange=()=>cascade(s.dataset.level));
+  cascade(null,e,!isEdit);
+  attachNameList();
+  const nm=document.querySelector('#empform input[name="Name"]');
+  if(nm) nm.onchange=()=>fillFromMstripes(nm.value);
+  const pf=document.getElementById('photofile');
+  if(pf) pf.onchange=()=>resizePhoto(pf.files[0]);
+}
+function cascade(changed,initial,autofill){
+  /* Faceted cascade: each dropdown offers only the values that fit every other choice,
+     and a level with exactly one possible value is filled in automatically
+     (e.g. picking a Range fills its District and Division). */
+  const levels=LEVELS.filter(l=>S.data.headers.includes(l));
+  const sel={}; levels.forEach(l=>sel[l]=document.querySelector(`#levels select[data-level="${l}"]`));
+  const val={}; levels.forEach(l=>val[l]= initial? (initial[l]||'') : sel[l].value);
+  const master=catMaster();
+  const optsFor=l=>uniq(master.filter(r=>levels.every(p=>p===l || !val[p] || r[p]===val[p])).map(r=>r[l]));
+  if(autofill && initial){ // pre-filled values (e.g. from M-STrIPES) that are not in the master list are dropped
+    levels.forEach(l=>{ if(val[l] && !optsFor(l).includes(val[l])) val[l]=''; });
+  }
+  if(changed){ // a new upper-level choice clears lower choices that no longer fit
+    const i=levels.indexOf(changed);
+    levels.slice(i+1).forEach(l=>{ if(val[l] && !optsFor(l).includes(val[l])) val[l]=''; });
+  }
+  for(let guard=0;guard<levels.length;guard++){
+    let changedAny=false;
+    levels.forEach(l=>{ if(!val[l]){ const o=optsFor(l); if(o.length===1 && (!initial || autofill)){ val[l]=o[0]; changedAny=true; } } });
+    if(!changedAny) break;
+  }
+  levels.forEach(l=>{
+    const opts=optsFor(l);
+    if(val[l] && !opts.includes(val[l])) opts.push(val[l]);
+    sel[l].innerHTML = opts.length? `<option value="">— Select —</option>`+opts.map(o=>`<option ${o===val[l]?'selected':''}>${esc(o)}</option>`).join('') : `<option value="">Not applicable</option>`;
+    sel[l].disabled = !opts.length;
+  });
+}
+/* Name suggestions from M-STrIPES: choosing one fills Designation (and Range when it is in the master list). */
+function attachNameList(){
+  const dl=document.getElementById('mnames'); if(!dl || M.status!=='ok') return;
+  const ab=catAbbrs();
+  dl.innerHTML=M.list.filter(o=>ab.has(abbr(o.desig))).map(o=>`<option value="${esc(o.name)}">${esc(o.desig+' · '+o.range)}</option>`).join('');
+}
+function fillFromMstripes(name){
+  if(M.status!=='ok') return;
+  const ab=catAbbrs(), n=normName(name);
+  const o=(M.byName.get(n)||[]).find(x=>ab.has(abbr(x.desig))); if(!o) return;
+  const cur={}; document.querySelectorAll('#levels select').forEach(s=>cur[s.dataset.level]=s.value);
+  if(cur['Designation']) return;   // keep a designation the user already picked
+  const d=desigFromAbbr(o.desig); if(!d) return;
+  cascade(null,{ 'Designation':d, 'Division':masterPlace('Division',o.division), 'Range':masterPlace('Range',o.range) },true);
+  toast(`Filled from M-STrIPES: ${o.desig}, ${o.range}`);
+}
+function resizePhoto(file){
+  if(!file) return;
+  const img=new Image(), rd=new FileReader();
+  rd.onload=()=>{ img.onload=()=>{
+      const max=400, k=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      formPhoto=c.toDataURL('image/jpeg',0.82);
+      const p=document.getElementById('photoprev'); p.src=formPhoto; p.style.display='block';
+    }; img.src=rd.result; };
+  rd.readAsDataURL(file);
+}
+async function submitForm(){
+  const f=document.getElementById('empform');
+  const rec={ Category:S.cat };
+  f.querySelectorAll('[name]').forEach(i=>rec[i.name]=i.value.trim());
+  document.querySelectorAll('.err').forEach(e=>e.textContent='');
+  const errs={};
+  if(!rec['Name']) errs['Name']='Name is required';
+  if(!rec['Designation']) errs['Designation']='Select a designation';
+  if(S.data.headers.includes('Place of working') && !rec['Place of working']) errs['Place of working']='Select place of working';
+  if(rec['Mobile No'] && !/^[6-9]\d{9}$/.test(rec['Mobile No'])) errs['Mobile No']='Enter a valid 10-digit mobile number';
+  const dup=rec['Employee ID'] && S.data.employees.find(r=>r['Employee ID']===rec['Employee ID'] && (!S.editing||r._row!==S.editing._row));
+  if(dup) errs['Employee ID']=`Already used by ${dup['Name']}`;
+  if(Object.keys(errs).length){ Object.entries(errs).forEach(([k,v])=>{ const el=document.querySelector(`[data-err="${k}"]`); if(el) el.textContent=v; }); toast('Please correct the highlighted fields',true); return; }
+  if(S.editing){ rec._row=S.editing._row; rec['ID No']=S.editing['ID No']; rec['Photo']=S.editing['Photo']||''; }
+  if(formPhoto) rec._photoData=formPhoto;
+  const btn=document.getElementById('savebtn'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    S.data=await api('saveEmployee',rec);
+    toast(S.editing?'Employee updated':'Employee saved to Google Sheet');
+    S.editing=null; S.tab='records'; render();
+  }catch(e){ toast(e.message||String(e),true); btn.disabled=false; btn.textContent='Save employee'; }
+}
+
+reload();
+</script>
+</body>
+</html>
