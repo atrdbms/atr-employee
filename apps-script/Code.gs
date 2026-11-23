@@ -195,7 +195,7 @@ function deleteEmployee_(rowNum, idNo) {
 function getMstripes_(force) {
   const cache = CacheService.getScriptCache();
   if (!force) {
-    const hit = cache.get('mstripes_v2');
+    const hit = cache.get('mstripes_v3');
     if (hit) return JSON.parse(hit);
   }
   const sh = SpreadsheetApp.openById(MSTRIPES_SHEET_ID).getSheets()[0];
@@ -218,7 +218,9 @@ function getMstripes_(force) {
     const name = g(row, 'name');
     if (!name) continue;
     const desig = g(row, 'desig');
-    const key = name.toLowerCase() + '|' + desig.toUpperCase();
+    // Same officer is typed differently across months ("C.P. Renuka" / "C.P.Renuka", "M Asha" / "M. Asha"):
+    // group on letters only.
+    const key = name.toLowerCase().replace(/[^a-z]/g, '') + '|' + desig.toUpperCase().replace(/[^A-Z]/g, '');
     let e = map[key];
     if (!e) e = map[key] = { name: name, desig: desig, division: '', range: '', beats: {}, month: '', places: {}, p: 0, km: 0, days: {}, obs: 0, last: '' };
     const dist = parseFloat(row[I.dist]) || 0;
@@ -228,7 +230,7 @@ function getMstripes_(force) {
     const mo = ((I.month >= 0 ? toIso(row[I.month]) : '') || d).slice(0, 7);
     const div = g(row, 'division'), rng = g(row, 'range'), beat = g(row, 'beat');
     if (rng) { const pk = div + '|' + rng; if (!e.places[pk] || mo > e.places[pk]) e.places[pk] = mo; }
-    if (mo > e.month) { e.month = mo; e.beats = {}; e.division = ''; e.range = ''; }
+    if (mo > e.month) { e.month = mo; e.beats = {}; e.division = ''; e.range = ''; e.name = name; e.desig = desig; }
     if (mo === e.month) {
       if (div && !e.division) e.division = div;
       if (rng && !e.range) e.range = rng;
@@ -251,6 +253,6 @@ function getMstripes_(force) {
   });
   const result = { officers: out, rows: values.length - 1,
                    loadedAt: Utilities.formatDate(new Date(), tz, 'dd-MM-yyyy HH:mm') };
-  try { cache.put('mstripes_v2', JSON.stringify(result), 6 * 3600); } catch (e) { /* too large to cache */ }
+  try { cache.put('mstripes_v3', JSON.stringify(result), 6 * 3600); } catch (e) { /* too large to cache */ }
   return result;
 }

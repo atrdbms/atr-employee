@@ -241,7 +241,7 @@ function stampHeader(){
    M-STrIPES link — patrol summary per officer, matched on Name + Designation
    ================================================================ */
 const M = { status:'idle', list:[], byKey:new Map(), byName:new Map(), loadedAt:'', err:'' };
-function normName(s){ return String(s||'').toLowerCase().replace(/[^a-z]+/g,' ').trim().split(' ').filter(Boolean).sort().join(' '); }
+function normName(s){ return String(s||'').toLowerCase().replace(/[^a-z]/g,''); } /* letters only: "C.P. Renuka" = "C.P.Renuka" = "CP Renuka" */
 function abbr(d){
   d=String(d||'').trim(); if(!d) return '';
   let a = /\s/.test(d) ? d.split(/\s+/).filter(w=>!/^(of|and|the|cum)$/i.test(w)).map(w=>w[0]).join('') : d;
