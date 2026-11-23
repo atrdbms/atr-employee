@@ -268,6 +268,13 @@ function catAbbrs(){ return new Set(catMaster().map(r=>abbr(r['Designation'])));
 /* M-STrIPES spells some places differently ("Nagarjuna Sagar", "Kambala Pally"): compare without spaces/case. */
 const placeKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 function masterPlace(level,v){ const k=placeKey(v); return uniq(S.data.master.map(r=>r[level])).find(x=>placeKey(x)===k) || v; }
+function monthLabel(ym){ if(!ym) return ''; const [y,m]=ym.split('-'); return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y; }
+/* Latest posting from M-STrIPES; flags when it differs from the Range saved in the database (e.g. after a transfer). */
+function postingHtml(r,o){
+  const moved = r['Range'] && o.range && placeKey(r['Range'])!==placeKey(o.range);
+  return `${esc(o.range)}${o.division?' · '+esc(o.division):''} <span class="muted" style="font-size:12px">${esc(monthLabel(o.month))}</span>`
+    + (moved?` <span class="pill" style="background:#fff3cc;color:#7a5a00" title="${esc(o.prev?'Earlier: '+o.prev:'')}">⚠ differs from database</span>`:'');
+}
 function fmtDate(iso){ if(!iso) return ''; const [y,m,d]=iso.split('-'); return `${d}-${m}-${y}`; }
 
 function categories(){
@@ -452,13 +459,13 @@ function mstripesReport(rows){
       <div class="kpi"><div class="l">Observations (linked)</div><div class="v">${obs.toLocaleString('en-IN')}</div></div>
       <div class="kpi"><div class="l">In M-STrIPES, not in database</div><div class="v">${missing.length}</div></div>
     </div>
-    ${linked.length?`<h4 style="margin:8px 0">Patrol summary of employees</h4><div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Name</th><th>Designation</th><th>Range</th><th>Beats patrolled</th><th class="num">Patrols</th><th class="num">Days</th><th class="num">Km</th><th class="num">Observations</th><th>Last patrol</th></tr></thead><tbody>
-      ${linked.map(([r,o])=>`<tr><td>${esc(r['Name'])}</td><td>${esc(r['Designation'])}</td><td>${esc(r['Range'])}</td><td>${esc(o.beats)}</td><td class="num">${o.patrols}</td><td class="num">${o.days}</td><td class="num">${o.km.toLocaleString('en-IN')}</td><td class="num">${o.obs}</td><td>${fmtDate(o.last)}</td></tr>`).join('')}
+    ${linked.length?`<h4 style="margin:8px 0">Patrol summary of employees</h4><div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Name</th><th>Designation</th><th>Range (database)</th><th>M-STrIPES posting (latest month)</th><th>Beats (latest month)</th><th class="num">Patrols</th><th class="num">Days</th><th class="num">Km</th><th class="num">Observations</th><th>Last patrol</th></tr></thead><tbody>
+      ${linked.map(([r,o])=>`<tr><td>${esc(r['Name'])}</td><td>${esc(r['Designation'])}</td><td>${esc(r['Range'])}</td><td>${postingHtml(r,o)}</td><td>${esc(o.beats)}</td><td class="num">${o.patrols}</td><td class="num">${o.days}</td><td class="num">${o.km.toLocaleString('en-IN')}</td><td class="num">${o.obs}</td><td>${fmtDate(o.last)}</td></tr>`).join('')}
       </tbody></table></div>`:'<div class="muted">No employee in this view matches an M-STrIPES officer yet.</div>'}
     ${missing.length?`<h4 style="margin:16px 0 4px">In M-STrIPES but not yet in the employee database</h4>
       <div class="muted" style="font-size:12px;margin-bottom:8px">Click <b>Add</b> to create the employee with Name and Designation filled in from M-STrIPES.</div>
-      <div class="tablewrap" style="max-height:380px"><table><thead><tr><th>Name (M-STrIPES)</th><th>Designation</th><th>Division</th><th>Range</th><th class="num">Patrols</th><th>Last patrol</th><th class="noprint"></th></tr></thead><tbody>
-      ${missing.map(o=>`<tr><td>${esc(o.name)}</td><td>${esc(o.desig)}</td><td>${esc(o.division)}</td><td>${esc(o.range)}</td><td class="num">${o.patrols}</td><td>${fmtDate(o.last)}</td><td class="noprint"><button class="btn ghost small" onclick="addFromMstripes(${M.list.indexOf(o)})">+ Add</button></td></tr>`).join('')}
+      <div class="tablewrap" style="max-height:380px"><table><thead><tr><th>Name (M-STrIPES)</th><th>Designation</th><th>Division (latest)</th><th>Range (latest)</th><th>Latest month</th><th class="num">Patrols</th><th>Last patrol</th><th class="noprint"></th></tr></thead><tbody>
+      ${missing.map(o=>`<tr><td>${esc(o.name)}</td><td>${esc(o.desig)}</td><td>${esc(o.division)}</td><td title="${esc(o.prev?'Earlier: '+o.prev:'')}">${esc(o.range)}${o.prev?' <span class="muted" style="font-size:12px">(moved)</span>':''}</td><td>${esc(monthLabel(o.month))}</td><td class="num">${o.patrols}</td><td>${fmtDate(o.last)}</td><td class="noprint"><button class="btn ghost small" onclick="addFromMstripes(${M.list.indexOf(o)})">+ Add</button></td></tr>`).join('')}
       </tbody></table></div>`:''}
   </div>`;
 }
@@ -511,7 +518,7 @@ function mCell(r){
   if(M.status==='loading'||M.status==='idle') return '<span class="muted">…</span>';
   if(M.status==='error') return '<span class="muted">–</span>';
   const o=mLink(r);
-  return o ? `<span class="pill" title="${esc(o.name+' · '+o.desig+' · beats: '+o.beats)}">✓ ${o.patrols} patrols · ${o.km.toLocaleString('en-IN')} km</span> <span class="muted" style="font-size:12px">last ${fmtDate(o.last)}</span>` : '<span class="muted">Not found</span>';
+  return o ? `<span class="pill" title="${esc(o.name+' · '+o.desig+' · latest: '+o.range+' ('+monthLabel(o.month)+') · beats: '+o.beats+(o.prev?' · earlier: '+o.prev:''))}">✓ ${o.patrols} patrols · ${o.km.toLocaleString('en-IN')} km</span> <span class="muted" style="font-size:12px">last ${fmtDate(o.last)}</span>` : '<span class="muted">Not found</span>';
 }
 function cellHtml(c,r){
   const v=r[c];

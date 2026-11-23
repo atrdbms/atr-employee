@@ -195,7 +195,7 @@ function deleteEmployee_(rowNum, idNo) {
 function getMstripes_(force) {
   const cache = CacheService.getScriptCache();
   if (!force) {
-    const hit = cache.get('mstripes_v1');
+    const hit = cache.get('mstripes_v2');
     if (hit) return JSON.parse(hit);
   }
   const sh = SpreadsheetApp.openById(MSTRIPES_SHEET_ID).getSheets()[0];
@@ -204,7 +204,7 @@ function getMstripes_(force) {
   const h = values[0].map(function (x) { return String(x).trim().toLowerCase(); });
   const ix = function (n) { return h.findIndex(function (x) { return x.indexOf(n) >= 0; }); };
   const I = { division: ix('division'), range: ix('range'), name: ix('name'), desig: ix('designation'),
-              beat: ix('beat'), dist: ix('distance'), date: ix('start date'), animal: ix('animal') };
+              beat: ix('beat'), dist: ix('distance'), date: ix('start date'), animal: ix('animal'), month: ix('month') };
   const tz = Session.getScriptTimeZone();
   const toIso = function (v) {
     if (v instanceof Date) return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
@@ -220,24 +220,37 @@ function getMstripes_(force) {
     const desig = g(row, 'desig');
     const key = name.toLowerCase() + '|' + desig.toUpperCase();
     let e = map[key];
-    if (!e) e = map[key] = { name: name, desig: desig, division: '', range: '', beats: {}, p: 0, km: 0, days: {}, obs: 0, last: '' };
-    if (!e.division) e.division = g(row, 'division');
-    if (!e.range) e.range = g(row, 'range');
-    const beat = g(row, 'beat'); if (beat) e.beats[beat] = 1;
+    if (!e) e = map[key] = { name: name, desig: desig, division: '', range: '', beats: {}, month: '', places: {}, p: 0, km: 0, days: {}, obs: 0, last: '' };
     const dist = parseFloat(row[I.dist]) || 0;
     const d = I.date >= 0 ? toIso(row[I.date]) : '';
+    // Posting = the officer's LATEST month in M-STrIPES (so a transfer shows the new range);
+    // older months are used only when the officer has no newer records.
+    const mo = ((I.month >= 0 ? toIso(row[I.month]) : '') || d).slice(0, 7);
+    const div = g(row, 'division'), rng = g(row, 'range'), beat = g(row, 'beat');
+    if (rng) { const pk = div + '|' + rng; if (!e.places[pk] || mo > e.places[pk]) e.places[pk] = mo; }
+    if (mo > e.month) { e.month = mo; e.beats = {}; e.division = ''; e.range = ''; }
+    if (mo === e.month) {
+      if (div && !e.division) e.division = div;
+      if (rng && !e.range) e.range = rng;
+      if (beat) e.beats[beat] = 1;
+    }
     if (dist > 0) { e.p++; e.km += dist; if (d) e.days[d] = 1; }
     if (g(row, 'animal')) e.obs++;
     if (d && d > e.last) e.last = d;
   }
   const out = Object.keys(map).map(function (k) {
     const e = map[k];
-    return { name: e.name, desig: e.desig, division: e.division, range: e.range,
-             beats: Object.keys(e.beats).slice(0, 6).join(', '), patrols: e.p, km: Math.round(e.km * 10) / 10,
+    const cur = e.division + '|' + e.range;
+    const prev = Object.keys(e.places).filter(function (pk) { return pk !== cur; })
+      .sort(function (a, b) { return e.places[b] < e.places[a] ? -1 : 1; })
+      .map(function (pk) { return pk.split('|')[1] + ' (till ' + e.places[pk] + ')'; });
+    return { name: e.name, desig: e.desig, division: e.division, range: e.range, month: e.month,
+             beats: Object.keys(e.beats).slice(0, 6).join(', '), prev: prev.join('; '),
+             patrols: e.p, km: Math.round(e.km * 10) / 10,
              days: Object.keys(e.days).length, obs: e.obs, last: e.last };
   });
   const result = { officers: out, rows: values.length - 1,
                    loadedAt: Utilities.formatDate(new Date(), tz, 'dd-MM-yyyy HH:mm') };
-  try { cache.put('mstripes_v1', JSON.stringify(result), 6 * 3600); } catch (e) { /* too large to cache */ }
+  try { cache.put('mstripes_v2', JSON.stringify(result), 6 * 3600); } catch (e) { /* too large to cache */ }
   return result;
 }
