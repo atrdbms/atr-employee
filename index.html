@@ -131,12 +131,8 @@
   </div>
   <div class="right">Nagarkurnool &amp; Nalgonda Districts<br>Telangana</div>
 </header>
-<nav class="crumbs">
-  <a href="https://atrdbms.github.io/atr-dbms/" style="font-weight:500">ATR DBMS</a><span class="sep">›</span><a onclick="goHome()">Employee Database</a><span id="crumbCat" class="hidden"><span class="sep">›</span> <span id="crumbCatName"></span></span>
-  <span class="spacer"></span>
-  <button class="btn ghost small" onclick="reload()">↻ Refresh data</button>
-  <a id="sheetLink" class="btn ghost small hidden" target="_blank" style="text-decoration:none">Open Google Sheet</a>
-</nav>
+
+<nav class="crumbs"><span class="spacer"></span><button class="btn ghost small" onclick="reload()">↻ Refresh data</button></nav>
 
 <main id="app"><div class="loading"><div class="spin"></div>Loading employee database…</div></main>
 
@@ -200,7 +196,6 @@ async function reload(){
   try{
     S.data = await api('getAppData');
     stampHeader();
-    const sl=document.getElementById('sheetLink'); if(S.data.sheetUrl){ sl.href=S.data.sheetUrl; sl.classList.remove('hidden'); }
     render();
     loadMstripes(false);
   }catch(e){
@@ -281,13 +276,11 @@ function setTab(t){ S.tab=t; if(t!=='form') S.editing=null; render(); }
 
 function render(){
   S.charts.forEach(c=>c.destroy()); S.charts=[];
-  const crumb=document.getElementById('crumbCat');
-  if(!S.cat){ crumb.classList.add('hidden'); renderHome(); return; }
-  crumb.classList.remove('hidden'); document.getElementById('crumbCatName').textContent = S.cat + ' Employees';
+  if(!S.cat){ renderHome(); return; }
   const app=document.getElementById('app');
   const n=catEmployees().length;
   app.innerHTML = `
-    <div class="cathead"><h2>${esc(S.cat)} Employees</h2><span class="pill">${n} record${n===1?'':'s'}</span></div>
+    <div class="cathead"><button class="btn ghost small noprint" onclick="goHome()">‹ Change category</button><h2>${esc(S.cat)} Employees</h2><span class="pill">${n} record${n===1?'':'s'}</span></div>
     <div class="tabs">
       <button class="tab ${S.tab==='dashboard'?'active':''}" onclick="setTab('dashboard')">Dashboard &amp; Reports</button>
       <button class="tab ${S.tab==='records'?'active':''}" onclick="setTab('records')">Employee Records</button>
