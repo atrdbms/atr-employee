@@ -91,6 +91,10 @@
   fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:0 0 16px}
   legend{font-weight:700;color:var(--green-800);padding:0 6px}
   .req::after{content:" *";color:var(--danger)}
+  .photobtns{display:flex;gap:8px;flex-wrap:wrap}
+  .photobtns label.btn{display:inline-flex;align-items:center;gap:4px;margin:0;color:var(--green-700);font-size:13px}
+  .onlymobile{display:none!important}
+  @media (pointer:coarse){ .onlymobile{display:inline-flex!important} span.onlymobile{display:inline!important} .onlydesktop{display:none!important} }
   .photoprev{width:96px;height:96px;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--green-50)}
   .err{color:var(--danger);font-size:12px;margin-top:3px}
   /* ---------- overlay ---------- */
@@ -561,7 +565,14 @@ function renderForm(){
           ${text('EPF No','text',{attrs:'maxlength="40"'})}
           ${has('Photo')?`<div class="full" style="display:flex;gap:14px;align-items:center">
               <img id="photoprev" class="photoprev" src="${esc(e['Photo']||'')}" alt="" ${e['Photo']?'':'style="display:none"'}>
-              <div><label>Photo</label><input type="file" accept="image/*" id="photofile"><div class="muted" style="font-size:12px">JPG/PNG. Resized automatically and saved to Google Drive.</div></div></div>`:''}
+              <div><label>Photo</label>
+                <div class="photobtns">
+                  <label class="btn ghost small onlymobile" for="photocam">📷 Take selfie</label>
+                  <label class="btn ghost small" for="photofile">⬆ <span class="onlymobile">Choose from gallery</span><span class="onlydesktop">Upload photo</span></label>
+                  <input type="file" accept="image/*" capture="user" id="photocam" hidden>
+                  <input type="file" accept="image/*" id="photofile" hidden>
+                </div>
+                <div class="muted" style="font-size:12px;margin-top:4px" id="photoname">JPG/PNG. Resized automatically and saved to Google Drive.</div></div></div>`:''}
         </div>
       </fieldset>
       <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -574,8 +585,8 @@ function renderForm(){
   attachNameList();
   const nm=document.querySelector('#empform input[name="Name"]');
   if(nm) nm.onchange=()=>fillFromMstripes(nm.value);
-  const pf=document.getElementById('photofile');
-  if(pf) pf.onchange=()=>resizePhoto(pf.files[0]);
+  ['photofile','photocam'].forEach(id=>{ const pf=document.getElementById(id);
+    if(pf) pf.onchange=()=>{ if(pf.files[0]){ resizePhoto(pf.files[0]); document.getElementById('photoname').textContent='Selected: '+pf.files[0].name+' (saved when you click Save)'; } }; });
 }
 function cascade(changed,initial,autofill){
   /* Faceted cascade: each dropdown offers only the values that fit every other choice,
