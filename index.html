@@ -94,7 +94,15 @@
   .photobtns{display:flex;gap:8px;flex-wrap:wrap}
   .photobtns label.btn{display:inline-flex;align-items:center;gap:4px;margin:0;color:var(--green-700);font-size:13px}
   .onlymobile{display:none!important}
-  @media (pointer:coarse){ .onlymobile{display:inline-flex!important} span.onlymobile{display:inline!important} .onlydesktop{display:none!important} }
+  .photobtns button.btn{display:inline-flex;align-items:center;gap:4px;font-size:13px}
+  .cam{position:fixed;inset:0;background:#000;z-index:70;display:flex;flex-direction:column}
+  .cam video{flex:1;width:100%;min-height:0;object-fit:cover;background:#000}
+  .cam video.mirror{transform:scaleX(-1)}
+  .cam .bar{display:flex;justify-content:space-around;align-items:center;padding:16px;background:#111}
+  .cam .shut{width:68px;height:68px;border-radius:50%;border:5px solid #fff;background:#e7efe9;cursor:pointer}
+  .cam .lnk{color:#fff;background:none;border:1px solid #666;border-radius:6px;padding:8px 12px;font-size:14px;cursor:pointer}
+  .cam .msg{color:#fff;text-align:center;padding:30px 20px}
+  @media (pointer:coarse), (max-width:820px){ .onlymobile{display:inline-flex!important} span.onlymobile{display:inline!important} .onlydesktop{display:none!important} }
   .photoprev{width:96px;height:96px;border-radius:8px;object-fit:cover;border:1px solid var(--line);background:var(--green-50)}
   .err{color:var(--danger);font-size:12px;margin-top:3px}
   /* ---------- overlay ---------- */
@@ -567,7 +575,7 @@ function renderForm(){
               <img id="photoprev" class="photoprev" src="${esc(e['Photo']||'')}" alt="" ${e['Photo']?'':'style="display:none"'}>
               <div><label>Photo</label>
                 <div class="photobtns">
-                  <label class="btn ghost small onlymobile" for="photocam">📷 Take selfie</label>
+                  <button type="button" class="btn ghost small onlymobile" onclick="openCamera()">📷 Take selfie</button>
                   <label class="btn ghost small" for="photofile">⬆ <span class="onlymobile">Choose from gallery</span><span class="onlydesktop">Upload photo</span></label>
                   <input type="file" accept="image/*" capture="user" id="photocam" hidden>
                   <input type="file" accept="image/*" id="photofile" hidden>
@@ -631,6 +639,44 @@ function fillFromMstripes(name){
   const d=desigFromAbbr(o.desig); if(!d) return;
   cascade(null,{ 'Designation':d, 'Division':masterPlace('Division',o.division), 'Range':masterPlace('Range',o.range) },true);
   toast(`Filled from M-STrIPES: ${o.desig}, ${o.range}`);
+}
+/* Live camera (front / selfie) inside the page. Falls back to the phone's own camera picker if blocked. */
+let camStream=null, camFacing='user';
+async function openCamera(){
+  const o=document.createElement('div'); o.className='cam'; o.id='camui';
+  o.innerHTML=`<video id="camvid" playsinline autoplay muted></video>
+    <div class="bar"><button class="lnk" type="button" onclick="closeCamera()">Cancel</button>
+    <button class="shut" type="button" aria-label="Capture photo" onclick="snapCamera()"></button>
+    <button class="lnk" type="button" onclick="flipCamera()">⟲ Flip</button></div>`;
+  document.body.appendChild(o);
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ return camFallback('This browser cannot open the camera here.'); }
+  await startCamera();
+}
+async function startCamera(){
+  if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:camFacing},width:{ideal:720},height:{ideal:720}},audio:false});
+    const v=document.getElementById('camvid'); if(!v){ camStream.getTracks().forEach(t=>t.stop()); return; }
+    v.srcObject=camStream; v.classList.toggle('mirror',camFacing==='user'); await v.play().catch(()=>{});
+  }catch(e){ camFallback(e && e.name==='NotAllowedError' ? 'Camera permission was denied. Allow camera access for this site in the browser settings, or use "Choose from gallery".' : 'Could not open the camera ('+(e&&e.name||e)+').'); }
+}
+function flipCamera(){ camFacing = camFacing==='user' ? 'environment' : 'user'; startCamera(); }
+function snapCamera(){
+  const v=document.getElementById('camvid'); if(!v||!v.videoWidth) return;
+  const s=Math.min(v.videoWidth,v.videoHeight), out=400, c=document.createElement('canvas'); c.width=out; c.height=out;
+  const g=c.getContext('2d');
+  if(camFacing==='user'){ g.translate(out,0); g.scale(-1,1); }
+  g.drawImage(v,(v.videoWidth-s)/2,(v.videoHeight-s)/2,s,s,0,0,out,out);
+  formPhoto=c.toDataURL('image/jpeg',0.85);
+  const p=document.getElementById('photoprev'); if(p){ p.src=formPhoto; p.style.display='block'; }
+  const n=document.getElementById('photoname'); if(n) n.textContent='Selfie captured (saved when you click Save)';
+  closeCamera();
+}
+function closeCamera(){ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } const o=document.getElementById('camui'); if(o) o.remove(); }
+function camFallback(msg){
+  const o=document.getElementById('camui'); if(!o) return;
+  o.innerHTML=`<div class="msg">${esc(msg)}<br><br><button class="btn" type="button" onclick="closeCamera();document.getElementById('photocam').click()">Open phone camera</button>
+    <br><br><button class="lnk" type="button" onclick="closeCamera()">Cancel</button></div>`;
 }
 function resizePhoto(file){
   if(!file) return;
