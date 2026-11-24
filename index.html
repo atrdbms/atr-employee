@@ -329,7 +329,44 @@ function renderHome(){
         <div><h3>${esc(c)}</h3>
           <div class="stats"><span><b>${emps.length}</b>Employees</span><span><b>${uniq(posts.map(r=>r['Designation'])).length}</b>Designations</span><span><b>${posts.length}</b>Posts listed</span></div>
         </div><div class="go">›</div></div>`;}).join('')}
-    </div>`;
+    </div>
+    ${abstractHtml(cats)}`;
+}
+/* Abstract: Regular vs Outsourcing staff, overall and division-wise */
+function abstractHtml(cats){
+  const E=S.data.employees, Mst=S.data.master;
+  const cnt=(arr,f)=>arr.filter(f).length;
+  const catRows=cats.map(c=>{ const p=cnt(Mst,r=>r['Category']===c), e=cnt(E,r=>r['Category']===c);
+    return {c,p,e,v:Math.max(0,p-e),d:uniq(Mst.filter(r=>r['Category']===c).map(r=>r['Designation'])).length}; });
+  const T=catRows.reduce((a,x)=>({p:a.p+x.p,e:a.e+x.e,v:a.v+x.v}),{p:0,e:0,v:0});
+  const divOf=r=>r['Division']||(r['District']?r['District']+' (district office)':'Circle office');
+  const divs=uniq([...Mst.map(divOf),...E.map(divOf)]);
+  const pc=(e,p)=>p?Math.round(Math.min(e,p)*100/p)+'%':'–';
+  return `<div class="card" style="margin-top:18px" id="abstract">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">Abstract of staff: Regular and Outsourcing</h3>
+      <span class="spacer" style="flex:1"></span><button class="btn ghost small noprint" onclick="window.print()">🖶 Print abstract</button>
+      <button class="btn ghost small noprint" onclick="exportAbstract()">⭳ Excel (CSV)</button></div>
+    <div class="printhead" style="display:none"></div>
+    <div class="grid2">
+      <div><h4 style="margin:4px 0 8px">Category-wise</h4><div class="tablewrap"><table><thead><tr><th>Category</th><th class="num">Designations</th><th class="num">Posts listed</th><th class="num">Employees</th><th class="num">Not yet entered</th><th class="num">Coverage</th></tr></thead><tbody>
+        ${catRows.map(x=>`<tr><td><a style="color:var(--green-700);cursor:pointer;font-weight:600" onclick="openCat('${esc(x.c)}')">${esc(x.c)}</a></td><td class="num">${x.d}</td><td class="num">${x.p}</td><td class="num">${x.e}</td><td class="num">${x.v}</td><td class="num">${pc(x.e,x.p)}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td>Total</td><td class="num">${uniq(Mst.map(r=>r['Designation'])).length}</td><td class="num">${T.p}</td><td class="num">${T.e}</td><td class="num">${T.v}</td><td class="num">${pc(T.e,T.p)}</td></tr></tfoot></table></div></div>
+      <div><h4 style="margin:4px 0 8px">Division-wise employees</h4><div class="tablewrap"><table><thead><tr><th>Division / office</th>${cats.map(c=>`<th class="num">${esc(c)}</th>`).join('')}<th class="num">Total</th><th class="num">Posts listed</th></tr></thead><tbody>
+        ${divs.map(d=>{ const v=cats.map(c=>cnt(E,r=>r['Category']===c&&divOf(r)===d)); return `<tr><td>${esc(d)}</td>${v.map(x=>`<td class="num">${x}</td>`).join('')}<td class="num"><b>${v.reduce((a,b)=>a+b,0)}</b></td><td class="num">${cnt(Mst,r=>divOf(r)===d)}</td></tr>`; }).join('')}
+        </tbody><tfoot><tr><td>Total</td>${cats.map(c=>`<td class="num">${cnt(E,r=>r['Category']===c)}</td>`).join('')}<td class="num">${E.length}</td><td class="num">${Mst.length}</td></tr></tfoot></table></div></div>
+    </div>
+    <h4 style="margin:16px 0 8px">Designation-wise employees</h4>
+    <div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Category</th><th>Designation</th><th class="num">Posts listed</th><th class="num">Employees</th><th class="num">Not yet entered</th></tr></thead><tbody>
+      ${cats.map(c=>uniq(Mst.filter(r=>r['Category']===c).map(r=>r['Designation'])).map(d=>{ const p=cnt(Mst,r=>r['Category']===c&&r['Designation']===d), e=cnt(E,r=>r['Category']===c&&r['Designation']===d); return `<tr><td>${esc(c)}</td><td>${esc(d)}</td><td class="num">${p}</td><td class="num">${e}</td><td class="num">${Math.max(0,p-e)||'–'}</td></tr>`; }).join('')).join('')}
+    </tbody></table></div>
+  </div>`;
+}
+function exportAbstract(){
+  const cats=categories(), E=S.data.employees, Mst=S.data.master, rows=[];
+  cats.forEach(c=>uniq(Mst.filter(r=>r['Category']===c).map(r=>r['Designation'])).forEach(d=>{
+    const p=Mst.filter(r=>r['Category']===c&&r['Designation']===d).length, e=E.filter(r=>r['Category']===c&&r['Designation']===d).length;
+    rows.push({'Category':c,'Designation':d,'Posts listed':p,'Employees':e,'Not yet entered':Math.max(0,p-e)}); }));
+  download(`ATR_staff_abstract_${stamp()}.csv`,rows,['Category','Designation','Posts listed','Employees','Not yet entered']);
 }
 
 /* ================================================================
@@ -459,8 +496,8 @@ function mstripesReport(rows){
       <div class="kpi"><div class="l">Observations (linked)</div><div class="v">${obs.toLocaleString('en-IN')}</div></div>
       <div class="kpi"><div class="l">In M-STrIPES, not in database</div><div class="v">${missing.length}</div></div>
     </div>
-    ${linked.length?`<h4 style="margin:8px 0">Patrol summary of employees</h4><div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Name</th><th>Designation</th><th>Range (database)</th><th>M-STrIPES posting (latest month)</th><th>Beats (latest month)</th><th class="num">Patrols</th><th class="num">Days</th><th class="num">Km</th><th class="num">Observations</th><th>Last patrol</th></tr></thead><tbody>
-      ${linked.map(([r,o])=>`<tr><td>${esc(r['Name'])}</td><td>${esc(r['Designation'])}</td><td>${esc(r['Range'])}</td><td>${postingHtml(r,o)}</td><td>${esc(o.beats)}</td><td class="num">${o.patrols}</td><td class="num">${o.days}</td><td class="num">${o.km.toLocaleString('en-IN')}</td><td class="num">${o.obs}</td><td>${fmtDate(o.last)}</td></tr>`).join('')}
+    ${linked.length?`<h4 style="margin:8px 0">Patrol summary of employees</h4><div class="tablewrap" style="max-height:420px"><table><thead><tr><th>Name</th><th>Designation</th><th>Range (database)</th><th>M-STrIPES posting (latest month)</th><th>Beats (latest month)</th><th class="num">Patrols</th><th class="num">Days</th><th class="num">Km</th><th class="num">Observations</th><th>Last patrol</th><th class="noprint">Generate report</th></tr></thead><tbody>
+      ${linked.map(([r,o])=>`<tr><td>${esc(r['Name'])}</td><td>${esc(r['Designation'])}</td><td>${esc(r['Range'])}</td><td>${postingHtml(r,o)}</td><td>${esc(o.beats)}</td><td class="num">${o.patrols}</td><td class="num">${o.days}</td><td class="num">${o.km.toLocaleString('en-IN')}</td><td class="num">${o.obs}</td><td>${fmtDate(o.last)}</td><td class="noprint"><button class="btn ghost small" onclick="empReport(${r._row})">📄 Report</button></td></tr>`).join('')}
       </tbody></table></div>`:'<div class="muted">No employee in this view matches an M-STrIPES officer yet.</div>'}
     ${missing.length?`<h4 style="margin:16px 0 4px">In M-STrIPES but not yet in the employee database</h4>
       <div class="muted" style="font-size:12px;margin-bottom:8px">Click <b>Add</b> to create the employee with Name and Designation filled in from M-STrIPES.</div>
@@ -507,8 +544,9 @@ function renderRecords(){
   const el=document.getElementById('tabcontent');
   if(!rows.length){ el.innerHTML=`<div class="card empty">No records match.${catEmployees().length?'':`<br><br><button class="btn" onclick="setTab('form')">+ Add employee</button>`}</div>`; return; }
   el.innerHTML = `<div class="tablewrap"><table><thead><tr>
-      ${cols.map(c=>`<th class="${c==='ID No'?'num':''}" onclick="sortBy('${esc(c)}')">${esc(c)}${col===c?(dir>0?' ▲':' ▼'):''}</th>`).join('')}<th>M-STrIPES</th><th class="noprint">Actions</th></tr></thead>
+      ${cols.map(c=>`<th class="${c==='ID No'?'num':''}" onclick="sortBy('${esc(c)}')">${esc(c)}${col===c?(dir>0?' ▲':' ▼'):''}</th>`).join('')}<th>M-STrIPES</th><th class="noprint">Generate report</th><th class="noprint">Actions</th></tr></thead>
     <tbody>${pageRows.map(r=>`<tr>${cols.map(c=>`<td class="${c==='ID No'?'num':''}">${cellHtml(c,r)}</td>`).join('')}<td>${mCell(r)}</td>
+      <td class="noprint"><button class="btn ghost small" onclick="empReport(${r._row})">📄 Report</button></td>
       <td class="noprint"><button class="btn ghost small" onclick="editRow(${r._row})">Edit</button> <button class="btn danger small" onclick="delRow(${r._row})">Delete</button></td></tr>`).join('')}</tbody></table></div>
     <div class="pager">Page ${S.page} of ${pages}
       <button class="btn ghost small" ${S.page<=1?'disabled':''} onclick="S.page--;refreshContent()">‹ Prev</button>
@@ -519,6 +557,42 @@ function mCell(r){
   if(M.status==='error') return '<span class="muted">–</span>';
   const o=mLink(r);
   return o ? `<span class="pill" title="${esc(o.name+' · '+o.desig+' · latest: '+o.range+' ('+monthLabel(o.month)+') · beats: '+o.beats+(o.prev?' · earlier: '+o.prev:''))}">✓ ${o.patrols} patrols · ${o.km.toLocaleString('en-IN')} km</span> <span class="muted" style="font-size:12px">last ${fmtDate(o.last)}</span>` : '<span class="muted">Not found</span>';
+}
+/* Printable one-page report for one employee (details + M-STrIPES patrol summary). */
+function empReport(row){
+  const r=S.data.employees.find(x=>x._row===row); if(!r) return;
+  const o=mLink(r);
+  const skip=['Photo'];
+  const rowsHtml=S.data.headers.filter(c=>!skip.includes(c)).map(c=>`<tr><th>${esc(c)}</th><td>${esc(r[c])||'–'}</td></tr>`).join('');
+  const m=o?`<h2>M-STrIPES patrol summary</h2><table>
+      <tr><th>Name in M-STrIPES</th><td>${esc(o.name)} (${esc(o.desig)})</td></tr>
+      <tr><th>Latest posting</th><td>${esc(o.range)}${o.division?', '+esc(o.division)+' Division':''}${o.month?' ('+esc(monthLabel(o.month))+')':''}</td></tr>
+      ${o.prev?`<tr><th>Earlier postings</th><td>${esc(o.prev)}</td></tr>`:''}
+      <tr><th>Beats (latest month)</th><td>${esc(o.beats)||'–'}</td></tr>
+      <tr><th>Total patrols</th><td>${o.patrols}</td></tr><tr><th>Days patrolled</th><td>${o.days}</td></tr>
+      <tr><th>Distance patrolled</th><td>${o.km.toLocaleString('en-IN')} km</td></tr><tr><th>Observations</th><td>${o.obs}</td></tr>
+      <tr><th>Last patrol</th><td>${fmtDate(o.last)}</td></tr></table>`
+    : `<h2>M-STrIPES patrol summary</h2><p class="mut">${M.status==='ok'?'No matching officer found in M-STrIPES (matched on Name + Designation).':'M-STrIPES data not loaded.'}</p>`;
+  const base=location.href.replace(/[#?].*$/,'').replace(/[^/]*$/,'');
+  const w=window.open('','_blank'); if(!w){ toast('Allow pop-ups for this site to open the report',true); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Employee report – ${esc(r['Name'])}</title>
+  <style>body{font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#1c2321;margin:0;padding:24px;font-size:13px}
+  .hd{display:flex;align-items:center;gap:12px;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:14px}
+  .hd img{width:54px;height:54px;object-fit:contain}.hd h1{margin:0;font-size:18px;color:#14532d}.hd div div{font-size:12px;color:#4a5450}
+  .top{display:flex;gap:18px;align-items:flex-start}.ph{width:120px;height:140px;object-fit:cover;border:1px solid #ccc;border-radius:6px;background:#f3f9f5}
+  h2{font-size:14px;color:#14532d;margin:18px 0 6px;border-bottom:1px solid #dfe5e1;padding-bottom:4px}
+  table{border-collapse:collapse;width:100%}th,td{border:1px solid #dfe5e1;padding:6px 9px;text-align:left;vertical-align:top}th{width:34%;background:#f3f9f5;color:#0f3d24}
+  .mut{color:#78837e}.ft{margin-top:22px;font-size:11px;color:#78837e;display:flex;justify-content:space-between}
+  .bar{margin-bottom:14px}.bar button{padding:7px 14px;border:1px solid #1b6b3a;background:#1b6b3a;color:#fff;border-radius:6px;cursor:pointer;font-weight:600}
+  @media print{.bar{display:none}body{padding:0}}</style></head><body>
+  <div class="bar"><button onclick="window.print()">🖶 Print / Save as PDF</button></div>
+  <div class="hd"><img src="${base}assets/telangana-emblem.png" alt=""><img src="${base}assets/atr-logo.png" alt="">
+    <div><h1>Amrabad Tiger Reserve – Employee Report</h1><div>Telangana Forest Department · ${esc(r['Category'])} staff</div></div></div>
+  <div class="top">${r['Photo']?`<img class="ph" src="${esc(r['Photo'])}" alt="">`:''}<div style="flex:1"><h2 style="margin-top:0">Employee details</h2><table>${rowsHtml}</table></div></div>
+  ${m}
+  <div class="ft"><span>Generated ${new Date().toLocaleString('en-IN')}</span><span>Employee data as on ${esc(S.data.loadedAt)}${M.status==='ok'?' · M-STrIPES as on '+esc(M.loadedAt):''}</span></div>
+  </body></html>`);
+  w.document.close();
 }
 function cellHtml(c,r){
   const v=r[c];
